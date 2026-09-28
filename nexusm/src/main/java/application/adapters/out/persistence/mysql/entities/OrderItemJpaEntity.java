@@ -45,4 +45,7 @@ public class OrderItemJpaEntity {
 
     @Column(name = "unit_price_currency", nullable = false, length = 3)
     private String unitPriceCurrency;
+
+    @Column(name = "warehouse_id", length = 36)
+    private String warehouseId;
 }

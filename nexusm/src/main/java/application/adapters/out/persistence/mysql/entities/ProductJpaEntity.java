@@ -44,8 +44,11 @@ public class ProductJpaEntity {
     @Column(name = "seller_id", nullable = false, length = 36)
     private String sellerId;
 
-    @Column(name = "active", nullable = false)
-    private boolean active;
+    @Column(name = "type", nullable = false, length = 20)
+    private String type;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

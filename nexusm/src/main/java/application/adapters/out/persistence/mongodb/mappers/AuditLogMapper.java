@@ -1,52 +1,36 @@
 package application.adapters.out.persistence.mongodb.mappers;
 
 import application.adapters.out.persistence.mongodb.documents.AuditLogDocument;
+import application.domain.events.BusinessOperationEvent;
 import application.domain.events.DomainEvent;
-import application.domain.events.InventoryUpdatedEvent;
 import application.domain.events.LowStockEvent;
-import application.domain.events.OrderCreatedEvent;
-import application.domain.events.OrderStatusChangedEvent;
-import application.domain.events.ProductAddedEvent;
-
-import java.util.Objects;
 
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
- * Mapea eventos de dominio a documentos de auditoría de MongoDB.
+ * Traduce los eventos de dominio a documentos de la colección {@code audit_logs}.
  */
 @Component
 public class AuditLogMapper {
 
-    private final ObjectMapper objectMapper;
-
-    public AuditLogMapper(ObjectMapper objectMapper) {
-        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper es obligatorio");
-    }
-
     public AuditLogDocument toDocument(DomainEvent event) {
         return new AuditLogDocument(
-            event.getClass().getSimpleName(),
+            eventType(event),
             extractAggregateId(event),
             serialize(event),
             event.occurredAt());
     }
 
+    private String eventType(DomainEvent event) {
+        if (event instanceof BusinessOperationEvent operation) {
+            return operation.operationType().name();
+        }
+        return event.getClass().getSimpleName();
+    }
+
     private String extractAggregateId(DomainEvent event) {
-        if (event instanceof OrderCreatedEvent created) {
-            return created.orderId().toString();
-        }
-        if (event instanceof OrderStatusChangedEvent changed) {
-            return changed.orderId().toString();
-        }
-        if (event instanceof InventoryUpdatedEvent updated) {
-            return updated.productId() + "|" + updated.warehouseId();
-        }
-        if (event instanceof ProductAddedEvent added) {
-            return added.productId().toString();
+        if (event instanceof BusinessOperationEvent operation) {
+            return operation.aggregateId();
         }
         if (event instanceof LowStockEvent lowStock) {
             return lowStock.productId() + "|" + lowStock.warehouseId();
@@ -54,11 +38,12 @@ public class AuditLogMapper {
         return event.getClass().getSimpleName();
     }
 
+    /**
+     * Los eventos de dominio son records de Java, por lo que {@code toString()}
+     * ya produce una representación legible con todos sus campos. Así el
+     * adaptador no depende de Jackson (Spring Boot 4 usa Jackson 3).
+     */
     private String serialize(DomainEvent event) {
-        try {
-            return objectMapper.writeValueAsString(event);
-        } catch (JsonProcessingException ex) {
-            return event.toString();
-        }
+        return event.toString();
     }
 }
