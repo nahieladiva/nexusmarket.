@@ -1,8 +1,8 @@
 package application.adapters.in.rest.requests;
 
 /**
- * DTO para registrar un vendedor.
+ * DTO de registro de un vendedor (solo lo usa un Administrador).
  */
-public record CreateSellerRequest(String fullName, String email, String phone,
-                                  String passwordHash, String businessName) {
+public record CreateSellerRequest(String identification, String fullName, String email,
+                                  String phone, String password, String businessName) {
 }

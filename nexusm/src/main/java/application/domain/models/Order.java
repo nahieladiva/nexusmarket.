@@ -4,12 +4,15 @@ import application.domain.enums.OrderStatus;
 import application.domain.exceptions.OrderStateTransitionException;
 import application.domain.valueobjects.Money;
 import application.domain.valueobjects.OrderId;
+import application.domain.valueobjects.ProductId;
 import application.domain.valueobjects.UserId;
+import application.domain.valueobjects.WarehouseId;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -19,7 +22,8 @@ import java.util.Objects;
  * <ul>
  *   <li>Una orden debe tener al menos un item.</li>
  *   <li>El total es siempre la suma de los subtotales de sus items.</li>
- *   <li>Los items solo se pueden agregar mientras la orden está en {@code PENDING}.</li>
+ *   <li>Los items solo se pueden agregar mientras la orden está en {@code CART}.</li>
+ *   <li>Un pedido {@code DELIVERED} o {@code CANCELLED} está finalizado y es inmutable.</li>
  *   <li>Las transiciones de estado siguen la máquina de estados definida en
  *       {@link OrderStatus}; cualquier transición inválida lanza
  *       {@link OrderStateTransitionException}.</li>
@@ -43,7 +47,7 @@ public final class Order {
         if (this.items.isEmpty()) {
             throw new IllegalArgumentException("Una orden debe tener al menos un item");
         }
-        this.status = status == null ? OrderStatus.PENDING : status;
+        this.status = status == null ? OrderStatus.CART : status;
         this.total = total != null ? total : calculateTotal();
         this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
         this.updatedAt = updatedAt == null ? this.createdAt : updatedAt;
@@ -51,12 +55,15 @@ public final class Order {
 
     public static Order create(UserId buyerId, List<OrderItem> items) {
         LocalDateTime now = LocalDateTime.now();
-        return new Order(OrderId.random(), buyerId, items, OrderStatus.PENDING,
+        return new Order(OrderId.random(), buyerId, items, OrderStatus.CART,
             null, now, now);
     }
 
+    /**
+     * Solo se pueden agregar ítems mientras el pedido está en {@code CART}.
+     */
     public void addItem(OrderItem item) {
-        if (status != OrderStatus.PENDING) {
+        if (status != OrderStatus.CART) {
             throw new OrderStateTransitionException(id, status, status);
         }
         this.items.add(Objects.requireNonNull(item, "El item es obligatorio"));
@@ -64,8 +71,42 @@ public final class Order {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void confirm() {
-        transitionTo(OrderStatus.CONFIRMED);
+    /** El comprador confirma el carrito: el pedido queda pendiente de pago. */
+    public void checkout() {
+        transitionTo(OrderStatus.PENDING_PAYMENT);
+    }
+
+    /**
+     * Registra la bodega de la que sale cada producto físico. Solo se permite
+     * mientras el pedido está pendiente de pago (justo después del checkout).
+     */
+    public void assignWarehouses(Map<ProductId, WarehouseId> allocation) {
+        Objects.requireNonNull(allocation, "La asignación de bodegas es obligatoria");
+        if (status != OrderStatus.PENDING_PAYMENT) {
+            throw new OrderStateTransitionException(id, status, status);
+        }
+        for (int i = 0; i < items.size(); i++) {
+            OrderItem item = items.get(i);
+            WarehouseId warehouse = allocation.get(item.getProductId());
+            if (warehouse != null) {
+                items.set(i, item.assignedTo(warehouse));
+            }
+        }
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** Busca la línea del pedido correspondiente a un producto. */
+    public java.util.Optional<OrderItem> findItem(ProductId productId) {
+        return items.stream().filter(item -> item.getProductId().equals(productId)).findFirst();
+    }
+
+    public boolean belongsTo(UserId userId) {
+        return buyerId.equals(userId);
+    }
+
+    /** Se registra el pago del pedido. */
+    public void markAsPaid() {
+        transitionTo(OrderStatus.PAID);
     }
 
     public void ship() {
@@ -78,6 +119,13 @@ public final class Order {
 
     public void cancel() {
         transitionTo(OrderStatus.CANCELLED);
+    }
+
+    /**
+     * Un pedido entregado o cancelado es inmutable.
+     */
+    public boolean isFinal() {
+        return status.isFinal();
     }
 
     private void transitionTo(OrderStatus target) {

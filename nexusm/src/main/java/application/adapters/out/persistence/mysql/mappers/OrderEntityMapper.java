@@ -10,6 +10,7 @@ import application.domain.valueobjects.OrderId;
 import application.domain.valueobjects.ProductId;
 import application.domain.valueobjects.Quantity;
 import application.domain.valueobjects.UserId;
+import application.domain.valueobjects.WarehouseId;
 
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class OrderEntityMapper {
             itemEntity.setQuantity(item.getQuantity().getValue());
             itemEntity.setUnitPriceAmount(item.getUnitPrice().getAmount());
             itemEntity.setUnitPriceCurrency(item.getUnitPrice().getCurrency().getCurrencyCode());
+            itemEntity.setWarehouseId(item.hasWarehouse() ? item.getWarehouseId().toString() : null);
             itemEntity.setOrder(entity);
             entity.getItems().add(itemEntity);
         });
@@ -60,6 +62,7 @@ public class OrderEntityMapper {
         return new OrderItem(
             ProductId.of(entity.getProductId()),
             Quantity.of(entity.getQuantity()),
-            Money.of(entity.getUnitPriceAmount().toPlainString(), entity.getUnitPriceCurrency()));
+            Money.of(entity.getUnitPriceAmount().toPlainString(), entity.getUnitPriceCurrency()),
+            entity.getWarehouseId() == null ? null : WarehouseId.of(entity.getWarehouseId()));
     }
 }

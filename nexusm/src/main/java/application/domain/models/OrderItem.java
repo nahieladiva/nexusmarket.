@@ -3,6 +3,7 @@ package application.domain.models;
 import application.domain.valueobjects.Money;
 import application.domain.valueobjects.ProductId;
 import application.domain.valueobjects.Quantity;
+import application.domain.valueobjects.WarehouseId;
 
 import java.util.Objects;
 
@@ -20,14 +21,39 @@ public final class OrderItem {
     private final ProductId productId;
     private final Quantity quantity;
     private final Money unitPrice;
+    private final WarehouseId warehouseId;
 
     public OrderItem(ProductId productId, Quantity quantity, Money unitPrice) {
+        this(productId, quantity, unitPrice, null);
+    }
+
+    /**
+     * @param warehouseId bodega de la que se reservó el stock; {@code null} para
+     *                    productos digitales o ítems aún sin asignar.
+     */
+    public OrderItem(ProductId productId, Quantity quantity, Money unitPrice,
+                     WarehouseId warehouseId) {
         this.productId = Objects.requireNonNull(productId, "El producto es obligatorio");
         this.quantity = Objects.requireNonNull(quantity, "La cantidad es obligatoria");
         if (quantity.getValue() <= 0) {
             throw new IllegalArgumentException("La cantidad de un item debe ser mayor a cero");
         }
         this.unitPrice = Objects.requireNonNull(unitPrice, "El precio unitario es obligatorio");
+        this.warehouseId = warehouseId;
+    }
+
+    /** Devuelve una copia del ítem asignada a la bodega indicada. */
+    public OrderItem assignedTo(WarehouseId warehouse) {
+        return new OrderItem(productId, quantity, unitPrice,
+            Objects.requireNonNull(warehouse, "La bodega es obligatoria"));
+    }
+
+    public boolean hasWarehouse() {
+        return warehouseId != null;
+    }
+
+    public WarehouseId getWarehouseId() {
+        return warehouseId;
     }
 
     public Money subtotal() {

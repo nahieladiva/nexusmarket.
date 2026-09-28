@@ -1,0 +1,7 @@
+# Logs y archivos temporales que no deben subirse
+*.log
+_sdd_list.txt
+.idea/
+.vscode/
+*.iml
+nexusm/target/

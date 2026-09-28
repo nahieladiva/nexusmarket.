@@ -1,8 +1,0 @@
-﻿
-FullName                                                                              Length
---------                                                                              ------
-C:\Users\nahie\Desktop\nexusmarket\SDD\domain\Domain Model.md                              0
-C:\Users\nahie\Desktop\nexusmarket\SDD\domain\Domain Value Objects.md                      0
-C:\Users\nahie\Desktop\nexusmarket\SDD\Software Architecture\Software Architecture.md      0
-
-
